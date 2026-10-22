@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}</style>
+</head>
+<body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Mighty Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Barlow+Semi+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: pure black and white. A crowned-M mark over a two-word wordmark; an announcement strip on top;
+     views (home, log in, sign up, rules, custom pages, owner panel) swap inside one centered column. */
+  :root {
+    --bg: #000;
+    --panel: #0C0C0C;
+    --panel-2: #181818;
+    --ink: #FFF;
+    --soft: #D2D2D2;
+    --muted: #A8A8A8;
+    --line: rgba(255, 255, 255, 0.2);
+    --line-hi: rgba(255, 255, 255, 0.6);
+    --err: #FF9C9C;
+    --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+    --font-body: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+    --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { height: 100%; background: var(--bg); }
+  body {
+    margin: 0; min-height: 100%;
+    background:
+      radial-gradient(70rem 34rem at 50% -14%, rgba(255, 255, 255, 0.16), transparent 62%),
+      repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 20px),
+      var(--bg);
+    background-color: var(--bg);
+    color: var(--ink); font-family: var(--font-body); font-size: 1.2rem; line-height: 1.45;
+    padding-left: var(--gutter-l); padding-right: var(--gutter-r); padding-block: 0;
+    overflow-x: hidden;
+    display: flex; flex-direction: column;
+  }
+  ::selection { background: var(--ink); color: #000; }
+  h1, h2, h3 { text-wrap: balance; }
+  h1:focus, h2:focus { outline: none; }
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  #banner, main, .ticker { position: relative; z-index: 1; }
+
+  /* Announcement strip */
+  #banner {
+    margin-left: calc(-1 * var(--gutter-l)); margin-right: calc(-1 * var(--gutter-r));
+    padding: 0.7rem var(--gutter-r) 0.7rem var(--gutter-l);
+    background: var(--ink); color: #000; font-weight: 600; text-align: center; overflow-wrap: anywhere;
+    transition: opacity 0.4s ease;
+  }
+  #banner.fade { opacity: 0; }
+  #banner .tag { font-family: var(--font-display); font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; margin-right: 0.7rem; }
+
+  main { flex: 1; width: 100%; display: grid; place-items: center; padding-block: 2rem; }
+  .view { width: 100%; max-width: 560px; margin-inline: auto; min-width: 0; }
+  .view.wide { max-width: 1000px; }
+
+  /* Home */
+  #home { max-width: 900px; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+  .mark-wrap { position: relative; width: clamp(7.5rem, 28vw, 14rem); aspect-ratio: 575 / 620; margin: clamp(1.25rem, 5vw, 2.75rem); }
+  .mark { position: relative; z-index: 1; display: block; width: 100%; height: 100%; fill: var(--ink); overflow: visible; }
+  h1.logo {
+    position: relative; z-index: 1; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 0.28em;
+    font-family: var(--font-display); font-weight: 900; text-transform: uppercase;
+    font-size: clamp(3.2rem, 15vw, 8rem); line-height: 0.9; letter-spacing: 0.02em; text-align: center;
+  }
+  h1.logo .word { display: inline-flex; }
+  .ch, .ch i { display: inline-block; font-style: normal; }
+  .w2 .ch i { color: transparent; -webkit-text-stroke: 0.035em var(--ink); }
+  .ring, .glow { display: none; position: absolute; left: 50%; top: 50%; translate: -50% -50%; border-radius: 50%; pointer-events: none; aspect-ratio: 1; }
+  #home.live .ring, #home.live .glow { display: block; }
+  .ring-a { width: 165%; border: 1px dashed rgba(255, 255, 255, 0.4); animation: spin 60s linear infinite; }
+  .ring-b { width: 132%; border: 2px solid transparent; border-top-color: var(--ink); border-right-color: rgba(255, 255, 255, 0.3); animation: spin-rev 16s linear infinite; }
+  .glow { width: 230%; background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.07) 40%, transparent 68%); animation: pulse 5s ease-in-out infinite; }
+  .greeting { margin: 0; font-weight: 600; font-size: 1rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); text-align: center; }
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
+  #custom-actions { display: contents; }
+
+  /* Logged-out home: entrance, float, spinning rings, particle field and ticker */
+  @keyframes mark-in { from { opacity: 0; transform: scale(0.72); filter: blur(10px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes crown-drop {
+    0% { opacity: 0; transform: translateY(-70px) rotate(-14deg); }
+    55% { opacity: 1; transform: translateY(6px) rotate(2deg); }
+    75% { transform: translateY(-3px); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes halo { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.25)); } 50% { filter: drop-shadow(0 0 26px rgba(255, 255, 255, 0.6)); } }
+  @keyframes slam {
+    0% { transform: translateY(-140%) rotate(-8deg) scale(1.3); opacity: 0; filter: blur(8px); }
+    60% { transform: translateY(8%) rotate(1deg) scale(1); opacity: 1; filter: blur(0); }
+    80% { transform: translateY(-3%); }
+    100% { transform: none; opacity: 1; filter: none; }
+  }
+  @keyframes wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-0.05em); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin-rev { to { transform: rotate(-360deg); } }
+  @keyframes pulse { 0%, 100% { opacity: 0.55; scale: 1; } 50% { opacity: 1; scale: 1.08; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @keyframes tick { to { transform: translateX(-50%); } }
+  #home.live .m-body { transform-box: fill-box; transform-origin: center; animation: mark-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  #home.live .m-crown { transform-box: fill-box; transform-origin: center bottom; animation: crown-drop 1s cubic-bezier(0.2, 0.9, 0.3, 1) 0.6s backwards; }
+  #home.live .mark { animation: float 5s ease-in-out 1.8s infinite, halo 4s ease-in-out 1.8s infinite; }
+  #home.live .ch { animation: slam 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(0.5s + var(--i) * 80ms); }
+  #home.live .ch i { animation: wave 3.2s ease-in-out infinite; animation-delay: calc(1.8s + var(--i) * 140ms); }
+  #home .actions .btn { animation: rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .ticker {
+    margin: 0 calc(-1 * var(--gutter-r) - 1.5rem) 1.75rem calc(-1 * var(--gutter-l) - 1.5rem);
+    background: var(--ink); color: #000; overflow: hidden; white-space: nowrap;
+    transform: rotate(-1.2deg); border-block: 3px solid #000; box-shadow: 0 0 0 2px var(--ink);
+  }
+  .ticker-track { display: inline-flex; animation: tick 28s linear infinite; }
+  .ticker-track span { font-family: var(--font-display); font-weight: 900; font-size: 1.6rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.55rem 1.2rem; }
+  .ticker-track i { font-style: normal; padding-inline: 0.3rem; opacity: 0.55; }
+  @media (prefers-reduced-motion: reduce) {
+    #home .m-body, #home .m-crown, #home .mark, #home .ch, #home .ch i, .ring, .glow, .ticker-track, #home .actions .btn { animation: none !important; }
+    #banner { transition: none; }
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; border: 0; cursor: pointer; text-decoration: none;
+    font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1.2;
+    padding: 0.8rem 2.2rem; color: var(--ink); background: var(--panel-2);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-2px); background: #2A2A2A; }
+  .btn:focus-visible { outline: none; background: var(--ink); color: #000; }
+  .btn:disabled { opacity: 0.5; cursor: progress; transform: none; }
+  .btn-solid { background: var(--ink); color: #000; }
+  .btn-solid:hover { background: var(--soft); }
+  .btn-line { background: transparent; box-shadow: inset 0 0 0 2px var(--ink); }
+  .btn-line:hover { background: var(--ink); color: #000; }
+  .btn-sm { font-size: 1.1rem; padding: 0.45rem 1.1rem; letter-spacing: 0.1em; }
+  .link {
+    background: none; border: 0; padding: 0.4rem 0; cursor: pointer;
+    font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft);
+  }
+  .link:hover { color: var(--ink); }
+  .link:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .link.danger { color: var(--err); }
+  .show-pw { justify-self: end; padding: 0; font-size: 1rem; letter-spacing: 0.1em; }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+  @media (max-width: 520px) {
+    #home .actions { flex-direction: column; align-items: stretch; width: 100%; max-width: 320px; }
+    #home .actions .btn { width: 100%; }
+  }
+
+  /* Headings, bars and text */
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .mini { width: 1.9rem; height: auto; aspect-ratio: 575 / 620; fill: var(--ink); flex: none; }
+  h2.title {
+    margin: 0.75rem 0 1.5rem; font-family: var(--font-display); font-weight: 900; text-transform: uppercase;
+    font-size: clamp(4rem, 18vw, 7rem); line-height: 0.85; color: var(--ink); overflow-wrap: anywhere;
+    text-shadow: 0.04em 0.04em 0 rgba(255, 255, 255, 0.16);
+  }
+  h2.title.long { font-size: clamp(3rem, 12vw, 5.5rem); line-height: 0.9; }
+  .body-text p { margin: 0 0 1rem; overflow-wrap: anywhere; color: var(--soft); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 1rem; }
+
+  /* Forms */
+  form { display: grid; gap: 1.1rem; }
+  label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.95rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  input[type="text"], input[type="password"], input[type="url"], textarea, select {
+    width: 100%; min-width: 0; font: inherit; font-size: 1.15rem; letter-spacing: normal; text-transform: none; font-weight: 500;
+    color: var(--ink); background: var(--panel); border: 2px solid var(--line); padding: 0.75rem 0.9rem; border-radius: 0;
+  }
+  textarea { min-height: 7rem; resize: vertical; }
+  input::placeholder, textarea::placeholder { color: #707070; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22); }
+  .check { display: flex; align-items: center; gap: 0.6rem; letter-spacing: normal; text-transform: none; font-size: 1.1rem; color: var(--ink); font-weight: 500; }
+  .check input { width: 1.2rem; height: 1.2rem; accent-color: var(--ink); }
+  .hint { margin: -0.4rem 0 0; font-size: 0.95rem; color: var(--muted); }
+  .status { min-height: 1.5em; margin: 0; font-weight: 600; }
+  .status.err { color: var(--err); }
+  .status.ok { color: var(--ink); }
+  .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+  .panel { padding: 1.4rem; background: var(--panel); border: 2px solid var(--line); display: grid; gap: 1rem; min-width: 0; }
+  .panel h3 { margin: 0; font-family: var(--font-display); font-weight: 900; font-size: 2.2rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; color: var(--ink); }
+  .panel p { margin: 0; color: var(--muted); }
+  .panel input[type="text"], .panel input[type="url"], .panel textarea, .panel select { background: #000; }
+  .stack { display: grid; gap: 1.25rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0 0 1.25rem; }
+
+  /* Owner lists and members */
+  .rows { display: grid; gap: 0.6rem; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; padding: 0.6rem 0.8rem; background: #000; border: 1px solid var(--line); }
+  .row .name { min-width: 0; overflow-wrap: anywhere; }
+  .row .name small { display: block; color: var(--muted); font-size: 0.95rem; }
+  .row .btns { display: flex; gap: 0.9rem; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); background: #000; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-weight: 600; font-size: 0.9rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.empty { white-space: normal; color: var(--muted); }
+  .badge { display: inline-block; padding: 0.1rem 0.6rem; font-weight: 600; font-size: 0.9rem; letter-spacing: 0.12em; text-transform: uppercase; background: var(--ink); color: #000; }
+
+  /* Global chat */
+  .view.chatv { max-width: 720px; }
+  .chat-log { height: min(58vh, 520px); overflow-y: auto; display: grid; align-content: start; gap: 0.6rem; padding: 0.8rem; background: #000; border: 2px solid var(--line); overscroll-behavior: contain; }
+  .msg { display: grid; gap: 0.2rem; padding: 0.55rem 0.8rem; background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+  .msg.mine { background: var(--panel-2); border-color: var(--line-hi); }
+  .msg .meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
+  .msg .who { font-family: var(--font-display); font-weight: 900; font-size: 1.2rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .msg .when { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  .msg .link { font-size: 0.95rem; padding: 0; margin-left: auto; }
+  .msg .text { overflow-wrap: anywhere; color: var(--soft); }
+  .chat-row { display: flex; gap: 0.8rem; }
+  .chat-row input { flex: 1; }
+
+  /* Page builder */
+  .editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+  .blocks { display: grid; gap: 0.8rem; }
+  .blk { display: grid; gap: 0.7rem; padding: 0.8rem; background: #000; border: 1px solid var(--line); min-width: 0; }
+  .blk-head { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .blk-head .kind { font-family: var(--font-display); font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); font-size: 1.15rem; }
+  .blk-head .btns { display: flex; gap: 0.9rem; }
+  .blk .link { font-size: 1rem; padding: 0.2rem 0; }
+  .panel .blk input[type="text"], .panel .blk input[type="url"], .panel .blk textarea, .panel .blk select { background: var(--panel); }
+  .add-row { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+  .preview { border: 2px dashed var(--line-hi); padding: 1.2rem; background: #000; min-width: 0; position: sticky; top: calc(1rem + env(safe-area-inset-top, 0px)); }
+  .pv-label { font-weight: 600; font-size: 0.9rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .preview h2.title { font-size: clamp(2.4rem, 7vw, 3.6rem); line-height: 0.9; margin: 0.5rem 0 1rem; }
+  .preview .btn { font-size: 1.2rem; padding: 0.6rem 1.4rem; }
+  .preview .btn:disabled { opacity: 0.6; cursor: default; }
+  @media (max-width: 860px) {
+    .editor-grid { grid-template-columns: minmax(0, 1fr); }
+    .preview { position: static; }
+  }
+  .pin { display: flex; justify-content: center; gap: 1rem; margin: 0 0 1.5rem; }
+  .pin i { width: 1.1rem; height: 1.1rem; border: 2px solid var(--ink); border-radius: 50%; }
+  .pin i.on { background: var(--ink); }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; max-width: 320px; margin: 0 auto 1rem; }
+  .pad .btn { padding: 0.9rem 0; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="mm" viewBox="340 320 575 620">
+    <path d="M360 366 Q495.8 457.8 627 558 Q759.2 457.8 895 366 L895 918 L766 858 L766 684 Q785 635 793 578 L627 726 L462 578 Q470 635 489 684 L489 858 L360 918 Z"/>
+    <path d="M524 372 L595 404 L627 338 L660 404 L731 372 L707 456 L627 514 L548 456 Z"/>
+  </symbol>
+</svg>
+
+<canvas id="fx" aria-hidden="true" hidden></canvas>
+<div id="banner" role="status" hidden><span class="tag">Announcement</span><span id="banner-text"></span></div>
+
+<main>
+  <section class="view live" id="home">
+    <div class="stage">
+      <div class="mark-wrap">
+        <div class="glow" aria-hidden="true"></div>
+        <div class="ring ring-a" aria-hidden="true"></div>
+        <div class="ring ring-b" aria-hidden="true"></div>
+        <svg class="mark" viewBox="340 320 575 620" role="img" aria-label="Mighty Hub logo">
+          <path class="m-body" d="M360 366 Q495.8 457.8 627 558 Q759.2 457.8 895 366 L895 918 L766 858 L766 684 Q785 635 793 578 L627 726 L462 578 Q470 635 489 684 L489 858 L360 918 Z"/>
+          <path class="m-crown" d="M524 372 L595 404 L627 338 L660 404 L731 372 L707 456 L627 514 L548 456 Z"/>
+        </svg>
+      </div>
+      <h1 class="logo" aria-label="Mighty Hub"><span class="word w1">Mighty</span><span class="word w2">Hub</span></h1>
+    </div>
+    <p class="greeting" id="greeting" hidden></p>
+    <div class="actions">
+      <button class="btn btn-line" type="button" id="btn-rules" data-go="rules">Rules</button>
+      <span id="custom-actions"></span>
+      <button class="btn btn-solid" type="button" id="owner-btn" data-go="owner" hidden>Developer</button>
+      <button class="btn" type="button" id="btn-logout" hidden>Exit developer mode</button>
+    </div>
+  </section>
+
+  <section class="view" id="rules" hidden>
+    <div class="bar">
+      <button class="link" type="button" data-go="home">&larr; Back</button>
+      <svg class="mini" viewBox="340 320 575 620" aria-hidden="true"><use href="#mm"/></svg>
+    </div>
+    <h2 class="title">Rules</h2>
+    <div class="body-text" id="rules-body"></div>
+  </section>
+
+  <section class="view" id="page" hidden>
+    <div class="bar">
+      <button class="link" type="button" data-go="home">&larr; Back</button>
+      <svg class="mini" viewBox="340 320 575 620" aria-hidden="true"><use href="#mm"/></svg>
+    </div>
+    <h2 class="title long" id="page-title"></h2>
+    <div class="body-text" id="page-body"></div>
+  </section>
+
+  <section class="view" id="locked" hidden>
+    <div class="bar"><svg class="mini" viewBox="340 320 575 620" aria-hidden="true"><use href="#mm"/></svg></div>
+    <h2 class="title long">Back soon</h2>
+    <div class="body-text"><p id="locked-msg"></p></div>
+  </section>
+
+  <section class="view" id="keypad" hidden>
+    <div class="bar">
+      <button class="link" type="button" data-go="home">&larr; Back</button>
+      <svg class="mini" viewBox="340 320 575 620" aria-hidden="true"><use href="#mm"/></svg>
+    </div>
+    <h2 class="title long">Code</h2>
+    <div class="pin" id="pin-dots" aria-hidden="true"></div>
+    <div class="pad" id="pad"></div>
+    <p class="status" id="pin-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="view wide" id="owner" hidden>
+    <div class="bar">
+      <button class="link" type="button" data-go="home">&larr; Home</button>
+      <button class="link danger" type="button" id="owner-out">Exit developer mode</button>
+    </div>
+    <h2 class="title">Developer</h2>
+    <nav class="chips" aria-label="Jump to a section">
+      <button class="btn btn-sm" type="button" data-jump="sec-ann">Announcement</button>
+      <button class="btn btn-sm" type="button" data-jump="sec-lock">Lock</button>
+      <button class="btn btn-sm" type="button" data-jump="sec-pages">Pages</button>
+      <button class="btn btn-sm" type="button" data-jump="sec-buttons">Buttons</button>
+      <button class="btn btn-sm" type="button" data-jump="sec-rules">Rules</button>
+    </nav>
+    <div class="stack">
+
+      <section class="panel" id="sec-ann">
+        <h3>Announcement</h3>
+        <p>Shows as a strip at the top of the screen for 10 seconds, then disappears. Saving again shows it again.</p>
+        <form id="ann-form" novalidate>
+          <label for="ann-text">Message
+            <textarea id="ann-text" maxlength="400" placeholder="What does everyone need to know?"></textarea>
+          </label>
+          <label class="check" for="ann-on"><input id="ann-on" type="checkbox"> Show to everyone</label>
+          <p class="status" id="ann-status" role="status" aria-live="polite"></p>
+          <div class="form-actions"><button class="btn btn-solid btn-sm" type="submit">Save announcement</button></div>
+        </form>
+      </section>
+
+      <section class="panel" id="sec-lock">
+        <h3>Site lock</h3>
+        <p>When locked, everyone except you sees a "Back soon" screen.</p>
+        <form id="lock-form" novalidate>
+          <label class="check" for="lock-on"><input id="lock-on" type="checkbox"> Lock the site</label>
+          <label for="lock-msg">Message for visitors
+            <input id="lock-msg" type="text" maxlength="200" placeholder="We are making updates.">
+          </label>
+          <p class="status" id="lock-status" role="status" aria-live="polite"></p>
+          <div class="form-actions"><button class="btn btn-solid btn-sm" type="submit">Save lock</button></div>
+        </form>
+      </section>
+
+      <section class="panel" id="sec-pages">
+        <h3>Pages</h3>
+        <div class="rows" id="pages-list"></div>
+        <div class="editor-grid">
+          <form id="page-form" novalidate>
+            <label for="pg-title">Page title
+              <input id="pg-title" type="text" maxlength="60" placeholder="About">
+            </label>
+            <div class="blocks" id="blocks"></div>
+            <div class="add-row">
+              <button class="btn btn-line btn-sm" type="button" id="add-text">Add text</button>
+              <button class="btn btn-line btn-sm" type="button" id="add-button">Add button</button>
+            </div>
+            <p class="status" id="pg-status" role="status" aria-live="polite"></p>
+            <div class="form-actions">
+              <button class="btn btn-solid btn-sm" type="submit" id="pg-save">Add page</button>
+              <button class="link" type="button" id="pg-cancel" hidden>Cancel edit</button>
+            </div>
+          </form>
+          <div class="preview" id="preview" aria-label="Live preview">
+            <span class="pv-label">Live preview</span>
+            <h2 class="title" id="pv-title">Untitled page</h2>
+            <div class="body-text" id="pv-body"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="sec-buttons">
+        <h3>Home buttons</h3>
+        <div class="rows" id="buttons-list"></div>
+        <form id="button-form" novalidate>
+          <label for="bt-label">Button label
+            <input id="bt-label" type="text" maxlength="20" placeholder="About">
+          </label>
+          <label for="bt-kind">Opens
+            <select id="bt-kind">
+              <option value="page">One of my pages</option>
+              <option value="screen">The Rules screen</option>
+              <option value="link">A web link</option>
+            </select>
+          </label>
+          <label for="bt-page" id="bt-page-wrap">Page
+            <select id="bt-page"></select>
+          </label>
+          <label for="bt-screen" id="bt-screen-wrap" hidden>Screen
+            <select id="bt-screen">
+              <option value="rules">Rules</option>
+            </select>
+          </label>
+          <label for="bt-url" id="bt-url-wrap" hidden>Link (https)
+            <input id="bt-url" type="url" placeholder="https://example.com">
+          </label>
+          <p class="status" id="bt-status" role="status" aria-live="polite"></p>
+          <div class="form-actions"><button class="btn btn-solid btn-sm" type="submit">Add button</button></div>
+        </form>
+      </section>
+
+      <section class="panel" id="sec-rules">
+        <h3>Rules text</h3>
+        <form id="rules-form" novalidate>
+          <label for="rules-text">What the Rules screen says
+            <textarea id="rules-text" maxlength="6000" placeholder="Leave a blank line between paragraphs."></textarea>
+          </label>
+          <p class="status" id="rules-status" role="status" aria-live="polite"></p>
+          <div class="form-actions"><button class="btn btn-solid btn-sm" type="submit">Save rules</button></div>
+        </form>
+      </section>
+
+    </div>
+  </section>
+</main>
+
+<div class="ticker" id="ticker" aria-hidden="true" hidden>
+  <div class="ticker-track">
+    <span>Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i></span>
+    <span>Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i> Mighty Hub <i>/</i></span>
+  </div>
+</div>
+
+<script type="application/json" id="site-data">{}</script>
+
+<script>
+(function () {
+  var SRC = "<!doctype html>\n" + document.documentElement.outerHTML; // pristine page, used to save settings
+  // Developer-mode code (salted hash). Settings are saved into the page itself, and only the page owner can publish.
+  var PIN_SALT = "7e77027a314da2616fe650c26635a78c";
+  var PIN_HASH = "4da737436d2fd6f4726260877ebdfd36db5861860352ec48341156f5d0485522";
+  var OWNER_ITER = 200000, ITERATIONS = 150000;
+  var SCREENS = { rules: "Rules" };
+
+  var artifactCap = null;
+  var enc = new TextEncoder();
+  var cfg = normCfg({});
+  var ownerUnlocked = false;
+  var current = "home", currentPageId = null;
+  var fails = 0, lockedUntil = 0;
+  var bannerKey = "", bannerTimer = null, btnKey = "";
+  var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  function $(id) { return document.getElementById(id); }
+  function hex(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (x) { return x.toString(16).padStart(2, "0"); }).join(""); }
+  function randomSalt() { return hex(crypto.getRandomValues(new Uint8Array(16))); }
+  async function derive(secret, saltHex, iter) {
+    var salt = Uint8Array.from(saltHex.match(/../g).map(function (h) { return parseInt(h, 16); }));
+    var key = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveBits"]);
+    return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iter || ITERATIONS, hash: "SHA-256" }, key, 256));
+  }
+  function setStatus(el, text, kind) { el.textContent = text; el.className = "status" + (kind ? " " + kind : ""); }
+  function uidOf() { return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function throttled(st) {
+    if (Date.now() < lockedUntil) { setStatus(st, "Too many tries. Wait 30 seconds and try again.", "err"); return true; }
+    return false;
+  }
+  function failed() { fails++; if (fails >= 5) { fails = 0; lockedUntil = Date.now() + 30000; } }
+  function mk(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
+  // Site config: announcement, lock, custom pages and buttons, rules text
+  function normPage(p) {
+    var blocks = Array.isArray(p.blocks)
+      ? p.blocks.filter(function (b) { return b && (b.type === "text" || b.type === "button"); })
+      : (p.body ? [{ type: "text", text: String(p.body) }] : []);
+    return { id: p.id, title: p.title, blocks: blocks };
+  }
+  function normCfg(d) {
+    d = d || {};
+    var a = d.announcement && typeof d.announcement === "object" ? d.announcement : {};
+    return {
+      rules: typeof d.rules === "string" ? d.rules : "",
+      buttons: Array.isArray(d.buttons) ? d.buttons.filter(function (b) { return b && typeof b.label === "string"; }) : [],
+      pages: Array.isArray(d.pages) ? d.pages.filter(function (p) { return p && typeof p.title === "string" && typeof p.id === "string"; }).map(normPage) : [],
+      announcement: { text: String(a.text || ""), on: !!a.on, at: String(a.at || "") },
+      locked: !!d.locked,
+      lockMessage: typeof d.lockMessage === "string" ? d.lockMessage : ""
+    };
+  }
+  function findPage(id) { for (var i = 0; i < cfg.pages.length; i++) if (cfg.pages[i].id === id) return cfg.pages[i]; return null; }
+  function paragraphs(el, text) {
+    el.textContent = "";
+    String(text || "").split(/\n\s*\n/).forEach(function (chunk) {
+      var t = chunk.trim(); if (!t) return;
+      el.appendChild(mk("p", "", t));
+    });
+  }
+
+  // Buttons and page content (shared by the live site, custom pages and the builder preview)
+  function makeButton(b) {
+    var el;
+    if (b.kind === "link" && /^https:\/\//i.test(String(b.target))) {
+      el = document.createElement("a"); el.href = b.target; el.target = "_blank"; el.rel = "noopener noreferrer";
+    } else if (b.kind === "page" && findPage(String(b.target))) {
+      el = document.createElement("button"); el.type = "button"; el.setAttribute("data-page", b.target);
+    } else if (b.kind === "screen" && SCREENS[b.target]) {
+      el = document.createElement("button"); el.type = "button"; el.setAttribute("data-go", b.target);
+    } else return null;
+    el.className = "btn btn-line"; el.textContent = b.label || "Button";
+    return el;
+  }
+  function renderBlocks(box, blocks, preview) {
+    box.textContent = ""; var row = null;
+    (blocks || []).forEach(function (b) {
+      if (b.type === "button") {
+        var el = makeButton(b);
+        if (!el) {
+          if (!preview || !b.label) return;
+          el = document.createElement("button"); el.type = "button"; el.disabled = true; el.className = "btn"; el.textContent = b.label;
+        }
+        if (!row) { row = mk("div", "btn-row"); box.appendChild(row); }
+        row.appendChild(el);
+      } else {
+        row = null;
+        String(b.text || "").split(/\n\s*\n/).forEach(function (chunk) {
+          var t = chunk.trim(); if (t) box.appendChild(mk("p", "", t));
+        });
+      }
+    });
+  }
+
+  // Page builder: a block editor with a live preview
+  var draft = { id: null, title: "", blocks: [] };
+  function wrapLabel(text, control) { var l = document.createElement("label"); l.appendChild(document.createTextNode(text)); l.appendChild(control); return l; }
+  function field(tag, i, f, value) {
+    var c = document.createElement(tag); c.setAttribute("data-i", String(i)); c.setAttribute("data-f", f);
+    if (value != null) c.value = value;
+    return c;
+  }
+  function blockEl(b, i) {
+    var box = mk("div", "blk");
+    var head = mk("div", "blk-head"), btns = mk("div", "btns");
+    head.appendChild(mk("span", "kind", b.type === "button" ? "Button" : "Text"));
+    [["up", "Up"], ["down", "Down"], ["del", "Remove"]].forEach(function (a) {
+      var x = mk("button", "link" + (a[0] === "del" ? " danger" : ""), a[1]); x.type = "button";
+      x.setAttribute("data-act", a[0]); x.setAttribute("data-i", String(i)); btns.appendChild(x);
+    });
+    head.appendChild(btns); box.appendChild(head);
+    if (b.type === "text") {
+      var ta = field("textarea", i, "text", b.text || ""); ta.maxLength = 3000; ta.placeholder = "Write something. A blank line starts a new paragraph.";
+      box.appendChild(ta);
+      return box;
+    }
+    var lab = field("input", i, "label", b.label || ""); lab.type = "text"; lab.maxLength = 20; lab.placeholder = "Button text";
+    box.appendChild(wrapLabel("Button text", lab));
+    var kind = field("select", i, "kind");
+    [["page", "One of my pages"], ["screen", "The Rules screen"], ["link", "A web link"]].forEach(function (o) {
+      var op = mk("option", "", o[1]); op.value = o[0]; kind.appendChild(op);
+    });
+    kind.value = b.kind || "page";
+    box.appendChild(wrapLabel("Opens", kind));
+    if (b.kind === "link") {
+      var url = field("input", i, "target", b.target || ""); url.type = "url"; url.placeholder = "https://example.com";
+      box.appendChild(wrapLabel("Link (https)", url));
+    } else {
+      var sel = field("select", i, "target");
+      if (b.kind === "screen") {
+        Object.keys(SCREENS).forEach(function (k) { var op = mk("option", "", SCREENS[k]); op.value = k; sel.appendChild(op); });
+      } else {
+        if (!cfg.pages.length) { var none = mk("option", "", "No pages yet"); none.value = ""; sel.appendChild(none); }
+        cfg.pages.forEach(function (p) { var op = mk("option", "", p.title); op.value = p.id; sel.appendChild(op); });
+      }
+      sel.value = b.target || "";
+      box.appendChild(wrapLabel(b.kind === "screen" ? "Screen" : "Page", sel));
+    }
+    return box;
+  }
+  function renderPreview() {
+    $("pv-title").textContent = draft.title.trim() || "Untitled page";
+    renderBlocks($("pv-body"), draft.blocks, true);
+  }
+  function renderEditor() {
+    var box = $("blocks"); box.textContent = "";
+    if (!draft.blocks.length) box.appendChild(mk("p", "hint", "Add text or a button to start. The preview updates as you type."));
+    draft.blocks.forEach(function (b, i) { box.appendChild(blockEl(b, i)); });
+    renderPreview();
+  }
+  function defaultTarget(kind) { return kind === "page" ? (cfg.pages[0] ? cfg.pages[0].id : "") : kind === "screen" ? "rules" : ""; }
+  function resetPageForm() {
+    draft = { id: null, title: "", blocks: [] }; $("pg-title").value = "";
+    $("pg-save").textContent = "Add page"; $("pg-cancel").hidden = true;
+    renderEditor();
+  }
+  $("pg-title").addEventListener("input", function () { draft.title = $("pg-title").value; renderPreview(); });
+  $("add-text").addEventListener("click", function () { draft.blocks.push({ type: "text", text: "" }); renderEditor(); });
+  $("add-button").addEventListener("click", function () {
+    var kind = cfg.pages.length ? "page" : "screen";
+    draft.blocks.push({ type: "button", label: "", kind: kind, target: defaultTarget(kind) }); renderEditor();
+  });
+  $("blocks").addEventListener("input", function (e) {
+    var t = e.target, i = t.getAttribute("data-i"), f = t.getAttribute("data-f");
+    if (i === null || !f || !draft.blocks[+i]) return;
+    draft.blocks[+i][f] = t.value; renderPreview();
+  });
+  $("blocks").addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.getAttribute("data-f") !== "kind") return;
+    var b = draft.blocks[+t.getAttribute("data-i")]; if (!b) return;
+    b.kind = t.value; b.target = defaultTarget(t.value); renderEditor();
+  });
+  $("blocks").addEventListener("click", function (e) {
+    var t = e.target.closest("[data-act]"); if (!t) return;
+    var i = +t.getAttribute("data-i"), act = t.getAttribute("data-act"), arr = draft.blocks, tmp;
+    if (act === "del") arr.splice(i, 1);
+    else if (act === "up" && i > 0) { tmp = arr[i - 1]; arr[i - 1] = arr[i]; arr[i] = tmp; }
+    else if (act === "down" && i < arr.length - 1) { tmp = arr[i + 1]; arr[i + 1] = arr[i]; arr[i] = tmp; }
+    renderEditor();
+  });
+  // The preview shows how buttons look but never navigates.
+  $("preview").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); }, true);
+
+  // Views
+  var views = ["home", "rules", "page", "locked", "owner", "keypad"];
+  function show(name) {
+    if (cfg.locked && !ownerUnlocked && name !== "keypad" && name !== "locked") name = "locked";
+    if (name === "owner" && !ownerUnlocked) name = "home";
+    if (name === "keypad" && ownerUnlocked) name = "owner";
+    var entering = current !== name;
+    current = name;
+    views.forEach(function (v) { $(v).hidden = v !== name; });
+    if (name === "owner" && entering) startOwner();
+    if (name === "keypad" && entering) startKeypad();
+    if (entering) {
+      window.scrollTo(0, 0);
+      var hd = $(name).querySelector("h1, h2");
+      if (hd) { hd.setAttribute("tabindex", "-1"); hd.focus({ preventScroll: true }); }
+    }
+    syncFx();
+  }
+  function openPage(id) {
+    var p = findPage(id);
+    if (!p) return show("home");
+    currentPageId = id;
+    $("page-title").textContent = p.title;
+    renderBlocks($("page-body"), p.blocks);
+    show("page");
+  }
+  document.addEventListener("click", function (e) {
+    var go = e.target.closest("[data-go]");
+    if (go) { show(go.getAttribute("data-go")); return; }
+    var pg = e.target.closest("[data-page]");
+    if (pg) openPage(pg.getAttribute("data-page"));
+  });
+
+  // Home screen: logged out = animations plus Log in and Sign up; logged in = the real buttons
+  function buildLogo() {
+    var i = 0;
+    Array.prototype.forEach.call(document.querySelectorAll("h1.logo .word"), function (w) {
+      var text = w.textContent; w.textContent = "";
+      text.split("").forEach(function (chr) {
+        var s = mk("span", "ch"); s.setAttribute("aria-hidden", "true"); s.style.setProperty("--i", String(i++));
+        s.appendChild(mk("i", "", chr)); w.appendChild(s);
+      });
+    });
+  }
+  function stagger(restart) {
+    var base = 1700, n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll("#home .actions .btn"), function (b) {
+      if (b.hidden || (b.parentNode && b.parentNode.id === "custom-actions" && b.parentNode.hidden)) return;
+      if (restart) { b.style.animation = "none"; void b.offsetWidth; b.style.animation = ""; }
+      b.style.animationDelay = (base + n * 130) + "ms"; n++;
+    });
+  }
+  function renderHome() {
+    $("home").classList.add("live");
+    $("owner-btn").hidden = !ownerUnlocked; $("btn-logout").hidden = !ownerUnlocked;
+    var g = $("greeting"); g.textContent = ownerUnlocked ? "Developer mode" : ""; g.hidden = !g.textContent;
+    stagger(true); syncFx();
+  }
+  function logout() { ownerUnlocked = false; try { sessionStorage.removeItem("mh-dev"); } catch (e) {} renderHome(); show("home"); }
+
+  // Particle field behind the logged-out home screen
+  var fx = { c: null, ctx: null, w: 0, h: 0, parts: [], streaks: [], raf: 0, running: false };
+  var FX_COLORS = ["255,255,255", "190,190,190", "255,255,255"];
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function newStreak(initial) {
+    return { x: rnd(-200, fx.w), y: rnd(0, fx.h + 200), len: rnd(140, 300), sp: rnd(10, 18), d: initial ? rnd(0, 200) : rnd(60, 240) };
+  }
+  function fxSeed() {
+    var n = Math.round(Math.min(70, Math.max(24, fx.w * fx.h / 17000))), i;
+    fx.parts = [];
+    for (i = 0; i < n; i++) fx.parts.push({ x: rnd(0, fx.w), y: rnd(0, fx.h), s: rnd(5, 20), vx: rnd(0.15, 0.6), vy: -rnd(0.2, 0.9), r: rnd(0, 6.28), vr: rnd(-0.012, 0.012), col: FX_COLORS[Math.floor(Math.random() * 3)], a: rnd(0.12, 0.45), k: i % 3 });
+    fx.streaks = [];
+    for (i = 0; i < 5; i++) fx.streaks.push(newStreak(true));
+  }
+  function fxResize() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    fx.w = window.innerWidth; fx.h = window.innerHeight;
+    fx.c.width = Math.round(fx.w * dpr); fx.c.height = Math.round(fx.h * dpr);
+    fx.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fxSeed();
+  }
+  function fxFrame() {
+    if (!fx.running) return;
+    var ctx = fx.ctx, w = fx.w, h = fx.h, i, p, s, j;
+    ctx.clearRect(0, 0, w, h);
+    for (i = 0; i < fx.parts.length; i++) {
+      p = fx.parts[i];
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      if (p.y < -30) { p.y = h + 30; p.x = rnd(0, w); }
+      if (p.x > w + 30) p.x = -30;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = p.a;
+      var c = "rgb(" + p.col + ")";
+      ctx.beginPath();
+      if (p.k === 0) {
+        for (j = 0; j < 6; j++) { var an = j * Math.PI / 3; if (j) ctx.lineTo(Math.cos(an) * p.s, Math.sin(an) * p.s); else ctx.moveTo(p.s, 0); }
+        ctx.closePath(); ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.stroke();
+      } else if (p.k === 1) {
+        ctx.moveTo(0, -p.s); ctx.lineTo(p.s * 0.6, 0); ctx.lineTo(0, p.s); ctx.lineTo(-p.s * 0.6, 0); ctx.closePath(); ctx.fillStyle = c; ctx.fill();
+      } else {
+        ctx.moveTo(-p.s, 0); ctx.lineTo(p.s, 0); ctx.moveTo(0, -p.s); ctx.lineTo(0, p.s); ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke();
+      }
+      ctx.restore();
+    }
+    for (i = 0; i < fx.streaks.length; i++) {
+      s = fx.streaks[i];
+      if (s.d > 0) { s.d--; continue; }
+      s.x += s.sp * 0.87; s.y -= s.sp * 0.5;
+      var x0 = s.x - s.len * 0.87, y0 = s.y + s.len * 0.5;
+      var g = ctx.createLinearGradient(x0, y0, s.x, s.y);
+      g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(255,255,255,0.55)");
+      ctx.globalAlpha = 1; ctx.strokeStyle = g; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(s.x, s.y); ctx.stroke();
+      if (s.x - s.len > w || s.y + s.len < 0) fx.streaks[i] = newStreak(false);
+    }
+    fx.raf = requestAnimationFrame(fxFrame);
+  }
+  function fxStart() {
+    if (!fx.c) {
+      fx.c = $("fx"); fx.ctx = fx.c.getContext("2d");
+      window.addEventListener("resize", function () { if (fx.running) fxResize(); });
+      document.addEventListener("visibilitychange", function () {
+        cancelAnimationFrame(fx.raf);
+        if (!document.hidden && fx.running) fx.raf = requestAnimationFrame(fxFrame);
+      });
+    }
+    if (!fx.ctx) return;
+    fxResize(); fx.running = true; fx.raf = requestAnimationFrame(fxFrame);
+  }
+  function fxStop() { fx.running = false; cancelAnimationFrame(fx.raf); if (fx.ctx) fx.ctx.clearRect(0, 0, fx.w, fx.h); }
+  function syncFx() {
+    var onHome = current === "home";
+    var want = onHome && !reduceMotion;
+    $("ticker").hidden = !onHome;
+    $("fx").hidden = !want;
+    if (want && !fx.running) fxStart(); else if (!want && fx.running) fxStop();
+  }
+
+  // Announcement strip (shows for 10 seconds), custom home buttons, rules text
+  function renderBanner() {
+    var a = cfg.announcement, on = a.on && a.text.trim() !== "";
+    var key = on ? a.at + "|" + a.text : "";
+    if (key === bannerKey) return; // same message: leave it alone, it may already have timed out
+    bannerKey = key;
+    clearTimeout(bannerTimer);
+    var b = $("banner");
+    b.classList.remove("fade");
+    b.hidden = !on;
+    $("banner-text").textContent = on ? a.text : "";
+    if (on) bannerTimer = setTimeout(function () {
+      b.classList.add("fade");
+      bannerTimer = setTimeout(function () { b.hidden = true; }, 450);
+    }, 10000);
+  }
+  function renderCustomButtons() {
+    var key = JSON.stringify([cfg.buttons, cfg.pages.map(function (p) { return p.id; })]);
+    if (key === btnKey) return; // unchanged: keep the buttons (and their animation) as they are
+    btnKey = key;
+    var box = $("custom-actions"); box.textContent = "";
+    cfg.buttons.forEach(function (b) {
+      var el = makeButton(b);
+      if (el) box.appendChild(el);
+    });
+    stagger(false);
+  }
+  function applyConfig() {
+    renderBanner();
+    renderCustomButtons();
+    paragraphs($("rules-body"), cfg.rules);
+    $("locked-msg").textContent = cfg.lockMessage || "We are making updates. Check back soon.";
+    if (current === "locked" && !cfg.locked) current = "home";
+    if (current === "page") { if (findPage(currentPageId)) openPage(currentPageId); else current = "home"; }
+    show(current);
+    if (current === "owner") renderOwnerLists();
+  }
+
+  // Secret way in: tap the logo 7 times, then enter the code
+  var taps = 0, tapAt = 0, pin = "";
+  function devTap() {
+    var now = Date.now(); taps = now - tapAt > 2000 ? 1 : taps + 1; tapAt = now;
+    if (taps >= 7) { taps = 0; if (!ownerUnlocked) show("keypad"); }
+  }
+  document.querySelector("#home .mark-wrap").addEventListener("click", devTap);
+  document.querySelector("#locked .mini").addEventListener("click", devTap);
+  ["1", "2", "3", "4", "5", "6", "7", "8", "9", "c", "0", "b"].forEach(function (k) {
+    var b = mk("button", "btn btn-line", k === "c" ? "C" : k === "b" ? "\u2190" : k); b.type = "button";
+    b.setAttribute("data-key", k); b.setAttribute("aria-label", k === "c" ? "Clear" : k === "b" ? "Delete" : k); $("pad").appendChild(b);
+  });
+  function pinDots() { var d = $("pin-dots"); d.textContent = ""; for (var i = 0; i < 4; i++) d.appendChild(mk("i", i < pin.length ? "on" : "")); }
+  function startKeypad() { pin = ""; setStatus($("pin-status"), ""); pinDots(); }
+  async function checkPin(code) {
+    var st = $("pin-status"), ok = false;
+    if (throttled(st)) { pin = ""; pinDots(); return; }
+    try { ok = (await derive(code, PIN_SALT, OWNER_ITER)) === PIN_HASH; } catch (e) {}
+    pin = ""; pinDots();
+    if (ok) { ownerUnlocked = true; try { sessionStorage.setItem("mh-dev", "1"); } catch (e) {} renderHome(); show("owner"); }
+    else { failed(); setStatus(st, "That is not it.", "err"); }
+  }
+  function pinKey(k) {
+    if (k === "c") pin = ""; else if (k === "b") pin = pin.slice(0, -1);
+    else if (/^\d$/.test(k) && pin.length < 4) pin += k; else return;
+    pinDots(); if (pin.length === 4) checkPin(pin);
+  }
+  $("pad").addEventListener("click", function (e) { var t = e.target.closest("[data-key]"); if (t) pinKey(t.getAttribute("data-key")); });
+  document.addEventListener("keydown", function (e) {
+    if (current !== "keypad") return;
+    if (e.key === "Backspace") pinKey("b"); else if (/^\d$/.test(e.key)) pinKey(e.key);
+  });
+  (async function () { try { if (window.claude && window.claude.use) artifactCap = await window.claude.use("artifact"); } catch (e) { artifactCap = null; } })();
+
+  // Developer panel: settings are written into the page and published as a new version (page owner only)
+  async function run(st, fn, okText) {
+    if (!artifactCap) { setStatus(st, "Saving needs you signed in to Claude as the page owner.", "err"); return false; }
+    try { await fn(); setStatus(st, okText, "ok"); return true; }
+    catch (err) { setStatus(st, err && err.code === "conflict" ? "Someone saved first. Try again." : "Could not save. Only the page owner can save changes.", "err"); return false; }
+  }
+  async function saveCfg(patch) {
+    var next = Object.assign({}, cfg, patch);
+    var json = JSON.stringify(next).replace(/</g, "\\u003c");
+    var html = SRC.replace(/(<script type="application\/json" id="site-data">)[\s\S]*?(<\/script>)/, function (m, a, b) { return a + json + b; });
+    await artifactCap.publish(html);
+    SRC = html; cfg = normCfg(next); applyConfig();
+  }
+  function fillOwnerForms() {
+    $("ann-text").value = cfg.announcement.text; $("ann-on").checked = cfg.announcement.on;
+    $("lock-on").checked = cfg.locked; $("lock-msg").value = cfg.lockMessage;
+    $("rules-text").value = cfg.rules;
+  }
+  function startOwner() { fillOwnerForms(); renderOwnerLists(); resetPageForm(); }
+  function emptyRow(text) { return mk("div", "row", text); }
+  function renderOwnerLists() {
+    var pl = $("pages-list"); pl.textContent = "";
+    if (!cfg.pages.length) pl.appendChild(emptyRow("No pages yet."));
+    cfg.pages.forEach(function (p) {
+      var row = mk("div", "row"), name = mk("div", "name", p.title), btns = mk("div", "btns");
+      var ed = mk("button", "link", "Edit"); ed.type = "button"; ed.setAttribute("data-edit-page", p.id);
+      var del = mk("button", "link danger", "Delete"); del.type = "button"; del.setAttribute("data-del-page", p.id);
+      btns.appendChild(ed); btns.appendChild(del); row.appendChild(name); row.appendChild(btns); pl.appendChild(row);
+    });
+    var sel = $("bt-page"); sel.textContent = "";
+    cfg.pages.forEach(function (p) { var o = mk("option", "", p.title); o.value = p.id; sel.appendChild(o); });
+    var bl = $("buttons-list"); bl.textContent = "";
+    if (!cfg.buttons.length) bl.appendChild(emptyRow("No custom buttons yet."));
+    cfg.buttons.forEach(function (b, i) {
+      var row = mk("div", "row"), name = mk("div", "name", b.label), small = document.createElement("small");
+      var pg = b.kind === "page" ? findPage(String(b.target)) : null;
+      small.textContent = b.kind === "page" ? "Opens page: " + (pg ? pg.title : "missing") : b.kind === "screen" ? "Opens: " + (SCREENS[b.target] || "missing") : String(b.target);
+      name.appendChild(small);
+      var btns = mk("div", "btns"), del = mk("button", "link danger", "Delete"); del.type = "button"; del.setAttribute("data-del-button", String(i));
+      btns.appendChild(del); row.appendChild(name); row.appendChild(btns); bl.appendChild(row);
+    });
+  }
+  $("owner-out").addEventListener("click", logout);
+  $("btn-logout").addEventListener("click", logout);
+  $("ann-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = $("ann-text").value.trim(), on = $("ann-on").checked && text !== "";
+    run($("ann-status"), function () { return saveCfg({ announcement: { text: text, on: on, at: new Date().toISOString() } }); }, on ? "Announcement is live." : "Saved. It is hidden.");
+  });
+  $("lock-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var on = $("lock-on").checked, msg = $("lock-msg").value.trim();
+    run($("lock-status"), function () { return saveCfg({ locked: on, lockMessage: msg }); }, on ? "Site is locked for everyone else." : "Site is open.");
+  });
+  $("rules-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = $("rules-text").value.trim();
+    run($("rules-status"), function () { return saveCfg({ rules: text }); }, "Rules saved.");
+  });
+  $("page-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var st = $("pg-status"), title = draft.title.trim(), blocks = [];
+    if (!title) return setStatus(st, "Give the page a title.", "err");
+    for (var i = 0; i < draft.blocks.length; i++) {
+      var b = draft.blocks[i];
+      if (b.type === "text") {
+        var tx = String(b.text || "").trim();
+        if (tx) blocks.push({ type: "text", text: tx });
+      } else {
+        var label = String(b.label || "").trim(), target = String(b.target || "").trim();
+        if (!label) return setStatus(st, "Every button needs text.", "err");
+        if (b.kind === "link" && !/^https:\/\//i.test(target)) return setStatus(st, "Button links must start with https://", "err");
+        if (b.kind === "page" && !findPage(target)) return setStatus(st, "Pick a page for each page button.", "err");
+        if (b.kind === "screen" && !SCREENS[target]) return setStatus(st, "Pick a screen for each screen button.", "err");
+        blocks.push({ type: "button", label: label, kind: b.kind, target: target });
+      }
+    }
+    var pages = cfg.pages.slice(), wasEdit = !!draft.id, editId = draft.id;
+    if (wasEdit) pages = pages.map(function (p) { return p.id === editId ? { id: p.id, title: title, blocks: blocks } : p; });
+    else pages.push({ id: uidOf(), title: title, blocks: blocks });
+    run(st, function () { return saveCfg({ pages: pages }); }, wasEdit ? "Page updated." : "Page added.").then(function (ok) { if (ok) resetPageForm(); });
+  });
+  $("pg-cancel").addEventListener("click", resetPageForm);
+  $("bt-kind").addEventListener("change", function () {
+    var k = $("bt-kind").value;
+    $("bt-page-wrap").hidden = k !== "page"; $("bt-screen-wrap").hidden = k !== "screen"; $("bt-url-wrap").hidden = k !== "link";
+  });
+  $("button-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var st = $("bt-status"), label = $("bt-label").value.trim(), kind = $("bt-kind").value;
+    var target = kind === "link" ? $("bt-url").value.trim() : kind === "screen" ? $("bt-screen").value : $("bt-page").value;
+    if (!label) return setStatus(st, "Give the button a label.", "err");
+    if (kind === "link" && !/^https:\/\//i.test(target)) return setStatus(st, "Links must start with https://", "err");
+    if (kind === "page" && !target) return setStatus(st, "Add a page first, then pick it here.", "err");
+    var buttons = cfg.buttons.concat([{ id: uidOf(), label: label, kind: kind, target: target }]);
+    run(st, function () { return saveCfg({ buttons: buttons }); }, "Button added.").then(function (ok) { if (ok) { $("bt-label").value = ""; $("bt-url").value = ""; } });
+  });
+  $("owner").addEventListener("click", function (e) {
+    var t;
+    if ((t = e.target.closest("[data-jump]"))) {
+      var sec = $(t.getAttribute("data-jump"));
+      if (sec) sec.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    } else if ((t = e.target.closest("[data-edit-page]"))) {
+      var p = findPage(t.getAttribute("data-edit-page")); if (!p) return;
+      draft = { id: p.id, title: p.title, blocks: p.blocks.map(function (b) { return Object.assign({}, b); }) };
+      $("pg-title").value = p.title; renderEditor();
+      $("pg-save").textContent = "Save page"; $("pg-cancel").hidden = false; $("pg-title").focus();
+    } else if ((t = e.target.closest("[data-del-page]"))) {
+      var id = t.getAttribute("data-del-page");
+      var pages = cfg.pages.filter(function (x) { return x.id !== id; }).map(function (pp) {
+        return { id: pp.id, title: pp.title, blocks: pp.blocks.filter(function (b) { return !(b.type === "button" && b.kind === "page" && b.target === id); }) };
+      });
+      var buttons = cfg.buttons.filter(function (b) { return !(b.kind === "page" && b.target === id); });
+      run($("pg-status"), function () { return saveCfg({ pages: pages, buttons: buttons }); }, "Page deleted.").then(function (ok) { if (ok && draft.id === id) resetPageForm(); });
+    } else if ((t = e.target.closest("[data-del-button]"))) {
+      var idx = parseInt(t.getAttribute("data-del-button"), 10);
+      var bs = cfg.buttons.filter(function (b, i) { return i !== idx; });
+      run($("bt-status"), function () { return saveCfg({ buttons: bs }); }, "Button deleted.");
+
+    }
+  });
+
+  try { cfg = normCfg(JSON.parse($("site-data").textContent || "{}")); } catch (e) {}
+  try { if (sessionStorage.getItem("mh-dev") === "1") ownerUnlocked = true; } catch (e) {}
+  buildLogo(); applyConfig(); renderHome();
+  if (ownerUnlocked) show("owner");
+})();
+</script>
+
+</body>
+</html>
